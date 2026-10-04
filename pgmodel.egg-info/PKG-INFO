@@ -1,0 +1,101 @@
+Metadata-Version: 2.4
+Name: pgmodel
+Version: 0.1.0
+Summary: A small async PostgreSQL query builder based on Python table classes
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: asyncpg<1,>=0.29
+Provides-Extra: dotenv
+Requires-Dist: python-dotenv>=1.0; extra == "dotenv"
+
+# pgmodel
+
+Небольшая асинхронная библиотека для PostgreSQL. Таблица описывается классом,
+а сравнения колонок превращаются в параметризованные условия SQL.
+
+## Установка
+
+```powershell
+python -m pip install -e .
+```
+
+Чтобы библиотека сама загрузила `.env`, установите optional extra:
+
+```powershell
+python -m pip install -e ".[dotenv]"
+```
+
+Задайте строку подключения, например:
+
+```powershell
+$env:DATABASE_URL = "postgresql://user:password@localhost:5432/app"
+```
+
+Или положите в `.env`:
+
+```dotenv
+DATABASE_URL=postgresql://user:password@localhost:5432/app
+```
+
+## Пример
+
+```python
+from pgmodel import Column, Database, Table
+
+
+class Users(Table):
+    __tablename__ = "users"
+    __schema__ = "public"
+
+    user_id = Column(primary_key=True)
+    username = Column()
+
+
+async def main() -> None:
+    async with Database.from_env(dotenv_path=".env") as db:
+        # Создание строки (INSERT)
+        created = await Users.insert(db, {"username": "maximilian"})
+
+        # Чтение строк (SELECT)
+        users = await Users.select(db, where=Users.user_id == 4)
+
+        # Изменение строки (UPDATE)
+        updated = await Users.update(
+            db,
+            {"username": "maximilian"},
+            Users.user_id == 4,
+        )
+
+        # Удаление строки (DELETE)
+        deleted = await Users.delete(db, Users.user_id == 4)
+
+        # Несколько условий: использовать &, |, а не and/or.
+        filtered = await Users.select(
+            db,
+            Users.user_id,
+            Users.username,
+            where=(Users.user_id >= 1) & Users.username.ilike("max%"),
+            order_by=[Users.user_id.desc()],
+            limit=25,
+        )
+```
+
+`insert`, `select`, `update` и `delete` возвращают список словарей по умолчанию,
+поскольку используют PostgreSQL `RETURNING`. Передайте `returning=None`, если
+нужен только статус выполнения для `insert`, `update` или `delete`.
+
+Для защиты от случайного массового изменения `update` и `delete` требуют условие
+`where`. Чтобы намеренно затронуть все строки, передайте `all_rows=True`.
+Значения запроса передаются отдельными параметрами, а имена таблиц и колонок
+экранируются как SQL-идентификаторы.
+
+На первом этапе поддерживаются операции над одной таблицей. `JOIN`, группировки,
+транзакции и создание таблиц пока не входят в API.
+
+## Тесты
+
+Тесты компилятора не требуют запущенного PostgreSQL:
+
+```powershell
+python -m unittest discover -s tests -v
+```

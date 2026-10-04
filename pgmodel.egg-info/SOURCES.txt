@@ -1,0 +1,14 @@
+README.md
+pyproject.toml
+pgmodel/__init__.py
+pgmodel/compiler.py
+pgmodel/database.py
+pgmodel/expressions.py
+pgmodel/model.py
+pgmodel/py.typed
+pgmodel.egg-info/PKG-INFO
+pgmodel.egg-info/SOURCES.txt
+pgmodel.egg-info/dependency_links.txt
+pgmodel.egg-info/requires.txt
+pgmodel.egg-info/top_level.txt
+tests/test_compiler.py
